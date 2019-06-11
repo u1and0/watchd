@@ -26,15 +26,20 @@ import (
 	"os/signal"
 	"path/filepath"
 	"time"
+
+	mapset "github.com/deckarep/golang-set"
 )
 
+// basename : ファイルパスpathからディレクトリと拡張子を取り去る
+func basename(path string) string {
+	filename := filepath.Base(path)
+	ext := filepath.Ext(filename)
+	base := filename[0 : len(filename)-len(ext)]
+	return base
+}
+
+// dirとdir1には行っているファイルの差分を2秒ごとに表示
 func main() {
-	/* thisfile, err := os.Executable()
-	if err != nil {
-		log.Fatal(err)
-	}
-	dir := filepath.Dir(thisfile)
-	*/
 	dir, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
@@ -50,19 +55,42 @@ func main() {
 			dir = _dir
 		}
 	}
+
+	dir = "test"
+	dir1 := "test1"
+
 	fmt.Println("////" + dir + "////")
 
-	// シグナル待機中にやりたい処理 ※goroutine(並行処理)で書く
+	// シグナル待機中にやりたい処理 * goroutine(並行処理)で書く
 	go func() {
 		for {
 			files, err := filepath.Glob(dir + "/*")
 			if err != nil {
 				log.Fatal(err)
 			}
-			// /root以下のディレクトリ/ファイルを表示する
+			// ディレクトリのファイル郡をset化
+			fileset := mapset.NewSet()
 			for _, f := range files {
-				fmt.Print(f)
+				fileset.Add(basename(f))
 			}
+
+			files1, err := filepath.Glob(dir1 + "/*")
+			if err != nil {
+				log.Fatal(err)
+			}
+			// ディレクトリのファイル郡をset化
+			fileset1 := mapset.NewSet()
+			for _, f := range files1 {
+				fileset1.Add(basename(f))
+			}
+
+			// /dirとdir1以下のディレクトリ/ファイルを表示する
+			fmt.Print(fileset)
+			fmt.Println("処理中...")
+			fmt.Print(fileset1)
+			fmt.Println("処理中1...")
+			// 差分表示
+			fmt.Print(fileset.Difference(fileset1))
 			fmt.Println("処理中...")
 			time.Sleep(2 * time.Second)
 		}
